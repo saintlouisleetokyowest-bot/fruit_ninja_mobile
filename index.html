@@ -350,7 +350,7 @@
 <body>
 
     <div id="game-container">
-        <video id="input_video" playsinline webkit-playsinline muted></video>
+        <video id="input_video"></video>
         <canvas id="output_canvas"></canvas>
         <div id="damage-overlay"></div>
 
@@ -540,15 +540,8 @@
         const videoElement = document.getElementById('input_video');
         const damageOverlay = document.getElementById('damage-overlay');
 
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = window.innerWidth + "px";
-            canvas.style.height = window.innerHeight + "px";
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-        resizeCanvas();
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
         let gameState = 'loading';
         let score = 0;
@@ -828,19 +821,7 @@
             }
         }
 
-        async function startGame() {
-            if (!cameraStarted) {
-                // iOS/Android require a user gesture before starting camera/audio
-                await initCamera();
-                cameraStarted = true;
-            }
-
-                // iOS/Android require a user gesture before starting camera/audio
-                await initCamera();
-                cameraStarted = true;
-            }
-
-e() {
+        function startGame() {
             score = 0;
             timeLeft = GAME_DURATION;
             fruits = [];
@@ -922,7 +903,6 @@ e() {
 
         hands.onResults(onResults);
 
-        let cameraStarted = false;
         // 改进的摄像头初始化
         async function initCamera() {
             try {
@@ -971,8 +951,7 @@ e() {
                         }
                     },
                     width: 640,
-                    height: 480,
-                    facingMode: 'user'
+                    height: 480
                 });
 
                 await camera.start();
@@ -997,7 +976,8 @@ e() {
         }
 
         // 启动初始化
-        updateLoadingStatus('Ready');
+        updateLoadingStatus('Loading...');
+        initCamera();
 
         window.addEventListener('resize', () => {
             resizeCanvas();
