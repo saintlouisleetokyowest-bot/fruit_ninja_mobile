@@ -382,7 +382,6 @@
         <div id="loading">
             <h1 id="loading-title">Starting AI Model...</h1>
             <p id="loading-text">Please allow camera permission for gesture recognition</p>
-            <p id="loading-status" style="font-size: 14px; color: #ffeb3b; margin-top: 10px;"></p>
             <div class="loader" style="font-size: 30px;">⌛</div>
         </div>
 
@@ -411,9 +410,6 @@
                 score: "Score",
                 loadingTitle: "Starting AI Model...",
                 loadingText: "Please allow camera permission for gesture recognition",
-                loadingStatus: "",
-                cameraError: "Camera Error",
-                cameraErrorText: "Cannot access camera. Please check permissions in Settings > Safari > Camera",
                 gameTitle: "Gesture Fruit Slicer",
                 modeText: "Timed Mode (3 minutes)",
                 instruction1: "Raise your index finger as the blade.",
@@ -422,16 +418,12 @@
                 startBtn: "Start Game",
                 gameoverTitle: "Time's Up!",
                 finalScore: "Final Score",
-                restartBtn: "Play Again",
-                reload: "Reload Page"
+                restartBtn: "Play Again"
             },
             zh: {
                 score: "得分",
                 loadingTitle: "正在启动 AI 模型...",
                 loadingText: "请允许摄像头权限以进行手势识别",
-                loadingStatus: "",
-                cameraError: "摄像头错误",
-                cameraErrorText: "无法访问摄像头。请在 设置 > Safari > 相机 中检查权限",
                 gameTitle: "手势切水果",
                 modeText: "限时模式 (3分钟)",
                 instruction1: "举起食指作为刀刃。",
@@ -440,16 +432,12 @@
                 startBtn: "开始计时",
                 gameoverTitle: "时间到！",
                 finalScore: "最终得分",
-                restartBtn: "再来一局",
-                reload: "重新加载"
+                restartBtn: "再来一局"
             },
             ja: {
                 score: "スコア",
                 loadingTitle: "AIモデルを起動中...",
                 loadingText: "ジェスチャー認識のためにカメラの許可をしてください",
-                loadingStatus: "",
-                cameraError: "カメラエラー",
-                cameraErrorText: "カメラにアクセスできません。設定 > Safari > カメラ で権限を確認してください",
                 gameTitle: "ジェスチャーフルーツスライサー",
                 modeText: "タイムモード (3分間)",
                 instruction1: "人差し指を刃として上げてください。",
@@ -458,27 +446,9 @@
                 startBtn: "ゲーム開始",
                 gameoverTitle: "タイムアップ！",
                 finalScore: "最終スコア",
-                restartBtn: "もう一度",
-                reload: "リロード"
+                restartBtn: "もう一度"
             }
         };
-
-        function updateLoadingStatus(message) {
-            const statusEl = document.getElementById('loading-status');
-            if (statusEl) {
-                statusEl.innerText = message;
-            }
-        }
-
-        function showError(errorMsg) {
-            const t = translations[currentLang];
-            document.getElementById('loading').innerHTML = `
-                <h1>${t.cameraError}</h1>
-                <p style="color: #ff4b4b;">${errorMsg}</p>
-                <p>${t.cameraErrorText}</p>
-                <button class="btn" onclick="location.reload()">${t.reload}</button>
-            `;
-        }
 
         let currentLang = 'en';
 
@@ -903,81 +873,15 @@
 
         hands.onResults(onResults);
 
-        // 改进的摄像头初始化
-        async function initCamera() {
-            try {
-                updateLoadingStatus('Requesting camera access...');
-                
-                // 检查浏览器支持
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Browser does not support camera access');
-                }
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
 
-                // 请求摄像头权限
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    } 
-                });
-                
-                updateLoadingStatus('Camera access granted, starting...');
-                
-                videoElement.srcObject = stream;
-                
-                // 等待视频准备好
-                await new Promise((resolve, reject) => {
-                    videoElement.onloadedmetadata = () => {
-                        videoElement.play()
-                            .then(resolve)
-                            .catch(reject);
-                    };
-                    videoElement.onerror = reject;
-                    
-                    // 5秒超时
-                    setTimeout(() => reject(new Error('Video loading timeout')), 5000);
-                });
-                
-                updateLoadingStatus('Initializing AI model...');
-                
-                // 启动 MediaPipe
-                const camera = new Camera(videoElement, {
-                    onFrame: async () => {
-                        try {
-                            await hands.send({ image: videoElement });
-                        } catch (e) {
-                            console.error('Frame processing error:', e);
-                        }
-                    },
-                    width: 640,
-                    height: 480
-                });
-
-                await camera.start();
-                updateLoadingStatus('Ready!');
-                
-            } catch (error) {
-                console.error('Camera initialization error:', error);
-                let errorMsg = 'Unknown error';
-                
-                if (error.name === 'NotAllowedError') {
-                    errorMsg = 'Camera permission denied';
-                } else if (error.name === 'NotFoundError') {
-                    errorMsg = 'No camera found';
-                } else if (error.name === 'NotReadableError') {
-                    errorMsg = 'Camera is being used by another app';
-                } else {
-                    errorMsg = error.message || 'Camera initialization failed';
-                }
-                
-                showError(errorMsg);
-            }
-        }
-
-        // 启动初始化
-        updateLoadingStatus('Loading...');
-        initCamera();
+        camera.start();
 
         window.addEventListener('resize', () => {
             resizeCanvas();
