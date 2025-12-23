@@ -350,7 +350,7 @@
 <body>
 
     <div id="game-container">
-        <video id="input_video"></video>
+        <video id="input_video" playsinline webkit-playsinline muted></video>
         <canvas id="output_canvas"></canvas>
         <div id="damage-overlay"></div>
 
@@ -382,6 +382,7 @@
         <div id="loading">
             <h1 id="loading-title">Starting AI Model...</h1>
             <p id="loading-text">Please allow camera permission for gesture recognition</p>
+            <p id="loading-status" style="font-size: 14px; color: #ffeb3b; margin-top: 10px;"></p>
             <div class="loader" style="font-size: 30px;">⌛</div>
         </div>
 
@@ -410,54 +411,74 @@
                 score: "Score",
                 loadingTitle: "Starting AI Model...",
                 loadingText: "Please allow camera permission for gesture recognition",
+                loadingStatus: "",
+                cameraError: "Camera Error",
+                cameraErrorText: "Cannot access camera. Please check permissions in Settings > Safari > Camera",
                 gameTitle: "Gesture Fruit Slicer",
                 modeText: "Timed Mode (3 minutes)",
                 instruction1: "Raise your index finger as the blade.",
                 instruction2: "Slice fruits to score, bombs (💣) deduct points!",
                 instruction3: "Missing fruits won't deduct health.",
-                instruction1_touch: "Touch the screen to control the blade.",
-                instruction2_touch: "Slice fruits to score, bombs (💣) deduct points!",
-                instruction3_touch: "Missing fruits won't deduct health.",
                 startBtn: "Start Game",
                 gameoverTitle: "Time's Up!",
                 finalScore: "Final Score",
-                restartBtn: "Play Again"
+                restartBtn: "Play Again",
+                reload: "Reload Page"
             },
             zh: {
                 score: "得分",
                 loadingTitle: "正在启动 AI 模型...",
                 loadingText: "请允许摄像头权限以进行手势识别",
+                loadingStatus: "",
+                cameraError: "摄像头错误",
+                cameraErrorText: "无法访问摄像头。请在 设置 > Safari > 相机 中检查权限",
                 gameTitle: "手势切水果",
                 modeText: "限时模式 (3分钟)",
                 instruction1: "举起食指作为刀刃。",
                 instruction2: "切碎水果得分，炸弹(💣)会扣分！",
                 instruction3: "漏掉水果不会扣血。",
-                instruction1_touch: "触摸屏幕控制刀刃。",
-                instruction2_touch: "切碎水果得分，炸弹(💣)会扣分！",
-                instruction3_touch: "漏掉水果不会扣血。",
                 startBtn: "开始计时",
                 gameoverTitle: "时间到！",
                 finalScore: "最终得分",
-                restartBtn: "再来一局"
+                restartBtn: "再来一局",
+                reload: "重新加载"
             },
             ja: {
                 score: "スコア",
                 loadingTitle: "AIモデルを起動中...",
                 loadingText: "ジェスチャー認識のためにカメラの許可をしてください",
+                loadingStatus: "",
+                cameraError: "カメラエラー",
+                cameraErrorText: "カメラにアクセスできません。設定 > Safari > カメラ で権限を確認してください",
                 gameTitle: "ジェスチャーフルーツスライサー",
                 modeText: "タイムモード (3分間)",
                 instruction1: "人差し指を刃として上げてください。",
                 instruction2: "フルーツを切ると得点、爆弾(💣)は減点！",
                 instruction3: "フルーツを逃してもダメージはありません。",
-                instruction1_touch: "画面をタッチして刃をコントロールしてください。",
-                instruction2_touch: "フルーツを切ると得点、爆弾(💣)は減点！",
-                instruction3_touch: "フルーツを逃してもダメージはありません。",
                 startBtn: "ゲーム開始",
                 gameoverTitle: "タイムアップ！",
                 finalScore: "最終スコア",
-                restartBtn: "もう一度"
+                restartBtn: "もう一度",
+                reload: "リロード"
             }
         };
+
+        function updateLoadingStatus(message) {
+            const statusEl = document.getElementById('loading-status');
+            if (statusEl) {
+                statusEl.innerText = message;
+            }
+        }
+
+        function showError(errorMsg) {
+            const t = translations[currentLang];
+            document.getElementById('loading').innerHTML = `
+                <h1>${t.cameraError}</h1>
+                <p style="color: #ff4b4b;">${errorMsg}</p>
+                <p>${t.cameraErrorText}</p>
+                <button class="btn" onclick="location.reload()">${t.reload}</button>
+            `;
+        }
 
         let currentLang = 'en';
 
@@ -489,18 +510,9 @@
             document.getElementById('loading-text').innerText = t.loadingText;
             document.getElementById('game-title').innerText = t.gameTitle;
             document.getElementById('mode-text').innerText = t.modeText;
-
-            // 根据控制模式选择合适的说明文本
-            if (useFallbackControls) {
-                document.getElementById('instruction-1').innerText = t.instruction1_touch;
-                document.getElementById('instruction-2').innerText = t.instruction2_touch;
-                document.getElementById('instruction-3').innerText = t.instruction3_touch;
-            } else {
-                document.getElementById('instruction-1').innerText = t.instruction1;
-                document.getElementById('instruction-2').innerText = t.instruction2;
-                document.getElementById('instruction-3').innerText = t.instruction3;
-            }
-
+            document.getElementById('instruction-1').innerText = t.instruction1;
+            document.getElementById('instruction-2').innerText = t.instruction2;
+            document.getElementById('instruction-3').innerText = t.instruction3;
             document.getElementById('start-btn').innerText = t.startBtn;
             document.getElementById('gameover-title').innerText = t.gameoverTitle;
             document.getElementById('restart-btn').innerText = t.restartBtn;
@@ -520,37 +532,6 @@
             document.getElementById('lang-menu').classList.remove('show');
         }
 
-        // --- 移动端兼容性检查 ---
-        function checkMobileCompatibility() {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isAndroid = /Android/.test(navigator.userAgent);
-
-            // 检查WebGL支持
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            const hasWebGL = !!gl;
-
-            // 检查WebAssembly支持
-            const hasWASM = typeof WebAssembly === 'object' && typeof WebAssembly.instantiate === 'function';
-
-            // 检查MediaDevices支持
-            const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-
-            return {
-                isMobile,
-                isIOS,
-                isAndroid,
-                hasWebGL,
-                hasWASM,
-                hasMediaDevices,
-                supportsMediaPipe: hasWebGL && hasWASM && hasMediaDevices && !isIOS // iOS Safari对MediaPipe支持较差
-            };
-        }
-
-        const deviceInfo = checkMobileCompatibility();
-        let useFallbackControls = !deviceInfo.supportsMediaPipe;
-
         // --- 游戏配置与状态 ---
         const canvas = document.getElementById('output_canvas');
         const ctx = canvas.getContext('2d');
@@ -559,8 +540,15 @@
         const videoElement = document.getElementById('input_video');
         const damageOverlay = document.getElementById('damage-overlay');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resizeCanvas();
 
         let gameState = 'loading';
         let score = 0;
@@ -581,9 +569,6 @@
 
         let fruits = [];
         let particles = [];
-
-        // 触摸控制变量（降级方案）
-        let touchBlade = { x: canvas.width / 2, y: canvas.height / 2, isActive: false };
 
         const GRAVITY = 0.2;
         const SPAWN_RATE = 50;
@@ -728,11 +713,10 @@
         }
 
         function checkCollisions() {
-            const isBladeActive = useFallbackControls ? touchBlade.isActive : blade.isActive;
-            if (!isBladeActive) return;
+            if (!blade.isActive) return;
 
-            const fingerX = useFallbackControls ? touchBlade.x : blade.x;
-            const fingerY = useFallbackControls ? touchBlade.y : blade.y;
+            const fingerX = blade.x;
+            const fingerY = blade.y;
 
             for (let i = fruits.length - 1; i >= 0; i--) {
                 const f = fruits[i];
@@ -782,18 +766,7 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (useFallbackControls) {
-                // 触摸控制：绘制触摸点
-                if (touchBlade.isActive) {
-                    ctx.beginPath();
-                    ctx.arc(touchBlade.x, touchBlade.y, 15, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-                    ctx.fill();
-                    ctx.strokeStyle = '#00ffff';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-                }
-            } else if (blade.points.length > 1) {
+            if (blade.points.length > 1) {
                 ctx.beginPath();
                 ctx.moveTo(blade.points[0].x, blade.points[0].y);
                 for (let i = 1; i < blade.points.length - 1; i++) {
@@ -855,7 +828,19 @@
             }
         }
 
-        function startGame() {
+        async function startGame() {
+            if (!cameraStarted) {
+                // iOS/Android require a user gesture before starting camera/audio
+                await initCamera();
+                cameraStarted = true;
+            }
+
+                // iOS/Android require a user gesture before starting camera/audio
+                await initCamera();
+                cameraStarted = true;
+            }
+
+e() {
             score = 0;
             timeLeft = GAME_DURATION;
             fruits = [];
@@ -922,6 +907,97 @@
             }
         }
 
+        const hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        let cameraStarted = false;
+        // 改进的摄像头初始化
+        async function initCamera() {
+            try {
+                updateLoadingStatus('Requesting camera access...');
+                
+                // 检查浏览器支持
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Browser does not support camera access');
+                }
+
+                // 请求摄像头权限
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
+                });
+                
+                updateLoadingStatus('Camera access granted, starting...');
+                
+                videoElement.srcObject = stream;
+                
+                // 等待视频准备好
+                await new Promise((resolve, reject) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play()
+                            .then(resolve)
+                            .catch(reject);
+                    };
+                    videoElement.onerror = reject;
+                    
+                    // 5秒超时
+                    setTimeout(() => reject(new Error('Video loading timeout')), 5000);
+                });
+                
+                updateLoadingStatus('Initializing AI model...');
+                
+                // 启动 MediaPipe
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        try {
+                            await hands.send({ image: videoElement });
+                        } catch (e) {
+                            console.error('Frame processing error:', e);
+                        }
+                    },
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
+                });
+
+                await camera.start();
+                updateLoadingStatus('Ready!');
+                
+            } catch (error) {
+                console.error('Camera initialization error:', error);
+                let errorMsg = 'Unknown error';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = 'Camera permission denied';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = 'No camera found';
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = 'Camera is being used by another app';
+                } else {
+                    errorMsg = error.message || 'Camera initialization failed';
+                }
+                
+                showError(errorMsg);
+            }
+        }
+
+        // 启动初始化
+        updateLoadingStatus('Ready');
 
         window.addEventListener('resize', () => {
             resizeCanvas();
@@ -943,85 +1019,6 @@
                 e.preventDefault();
             }
         }, { passive: false });
-
-        // 触摸控制事件监听器（降级方案）
-        if (useFallbackControls) {
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                touchBlade.x = touch.clientX - rect.left;
-                touchBlade.y = touch.clientY - rect.top;
-                touchBlade.isActive = true;
-            });
-
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (e.touches.length > 0) {
-                    const touch = e.touches[0];
-                    const rect = canvas.getBoundingClientRect();
-                    touchBlade.x = touch.clientX - rect.left;
-                    touchBlade.y = touch.clientY - rect.top;
-                    touchBlade.isActive = true;
-                }
-            });
-
-            canvas.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touchBlade.isActive = false;
-            });
-        }
-
-        // 初始化函数
-        async function initGame() {
-            if (useFallbackControls) {
-                // 降级模式：直接显示开始屏幕
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('start-screen').classList.remove('hidden');
-                gameState = 'menu';
-
-                // 更新说明文字
-                const instructions = document.getElementById('game-instructions');
-                instructions.innerHTML = `
-                    <b id="mode-text">Timed Mode (3 minutes)</b><br>
-                    <span id="instruction-1">Touch the screen to control the blade.</span><br>
-                    <span id="instruction-2">Slice fruits to score, bombs (💣) deduct points!</span><br>
-                    <span id="instruction-3">Missing fruits won't deduct health.</span>
-                `;
-
-                // 隐藏相机预览
-                document.getElementById('cam-preview').style.display = 'none';
-            } else {
-                // 正常模式：启动相机和MediaPipe
-                try {
-                    hands.setOptions({
-                        maxNumHands: 1,
-                        modelComplexity: 1,
-                        minDetectionConfidence: 0.5,
-                        minTrackingConfidence: 0.5
-                    });
-
-                    hands.onResults(onResults);
-
-                    const camera = new Camera(videoElement, {
-                        onFrame: async () => {
-                            await hands.send({ image: videoElement });
-                        },
-                        width: 640,
-                        height: 480
-                    });
-
-                    await camera.start();
-                } catch (error) {
-                    console.warn('MediaPipe initialization failed, falling back to touch controls:', error);
-                    useFallbackControls = true;
-                    initGame(); // 重新初始化
-                }
-            }
-        }
-
-        // 启动游戏
-        initGame();
 
     </script>
 </body>
